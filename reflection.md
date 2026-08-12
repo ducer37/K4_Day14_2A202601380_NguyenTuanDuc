@@ -47,6 +47,43 @@ Retrieval không phải bottleneck chính. Context Recall trung bình `0.879` v�
 
 Cần lưu ý rằng metric trong lab dựa trên word-overlap, nên một số câu trả lời đúng semantic vẫn có thể bị chấm thấp nếu wording khác expected answer. Ví dụ `E03` trả lời đúng "OrbitPlus costs USD 49 annually", nhưng expected dùng "USD 49 per year", làm Relevance chỉ `0.333`.
 
+### Deterministic RAGAS-inspired Result
+
+Kết quả benchmark ở trên là kết quả **deterministic RAGAS-inspired evaluator** bắt buộc của lab. Phần này được implement trong `template.py` và chạy qua:
+
+```text
+python evaluate_answers.py
+```
+
+Artifact kết quả:
+
+```text
+artifacts/benchmark_results.json
+```
+
+Evaluator này không gọi real RAGAS framework. Nó mô phỏng các RAGAS-style metrics bằng word-overlap heuristic để chạy nhanh, ổn định và có thể lặp lại:
+
+| Metric | Formula used in lab | Interpretation |
+|---|---|---|
+| Faithfulness | `|answer_tokens ∩ context_tokens| / |answer_tokens|` | Answer có grounded trong context không. |
+| Relevance | `|answer_tokens ∩ question_tokens| / |question_tokens|` | Answer có bám vào question không. |
+| Completeness | `|answer_tokens ∩ expected_tokens| / |expected_tokens|` | Answer có đủ ý so với expected answer không. |
+| Context Recall | `|expected_tokens ∩ union_tokens| / |expected_tokens|` | Retriever có lấy đủ evidence không. |
+| Context Precision | Average Precision@K | Relevant chunks có đứng sớm trong ranking không. |
+
+Kết quả chính:
+
+```text
+Pass rate: 60.0%
+Avg Context Recall: 0.879
+Avg Context Precision: 0.962
+Avg Faithfulness: 0.748
+Avg Relevance: 0.648
+Avg Completeness: 0.697
+```
+
+DeepEval ở phần bonus chỉ dùng để so sánh semantic framework. Vì vậy, khi chấm phần bắt buộc, kết quả deterministic RAGAS-inspired trong `benchmark_results.json` mới là baseline chính.
+
 ---
 
 ## 2. Metric Summary Interpretation

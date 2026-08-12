@@ -7,12 +7,12 @@
 **Domain:** OrbitTech Store Customer Support  
 **Provider/model for real RAG answers:** Groq - `llama-3.3-70b-versatile`
 
-Artifacts used in this worksheet:
+Các artifact được dùng trong worksheet này:
 
 - `golden_dataset.json`
 - `artifacts/actual_answers.json`
 - `artifacts/benchmark_results.json`
-- `artifacts/deepeval_results.json` for the bonus framework comparison
+- `artifacts/deepeval_results.json` cho phần bonus framework comparison
 
 ---
 
@@ -20,13 +20,13 @@ Artifacts used in this worksheet:
 
 | Checkpoint | Acceptance criteria | Result |
 |---|---|---|
-| CP1 - Part 1 Warm-up | Exercises 1.1-1.3 completed; explains metric interpretation and CI/CD evaluation. | Passed |
-| CP2 - Core Coding | Tasks 1-5 completed; targeted tests and full test suite pass. | Passed |
-| CP3 - Golden Dataset, RAG & Benchmark | Dataset validates, 20 actual answers generated, Exercise 3.2/3.3 completed. | Passed |
-| CP4 - Failure Analysis & Reflection | `reflection.md` includes 5 Whys, failure clustering, improvement log, regression strategy. | Passed |
-| Final Check | Required deliverables completed: `solution/solution.py`, `golden_dataset.json`, `exercises.md`, `reflection.md`. | Passed |
+| CP1 - Part 1 Warm-up | Đã hoàn thành Exercises 1.1-1.3, có giải thích cách đọc metric và CI/CD evaluation. | Passed |
+| CP2 - Core Coding | Đã hoàn thành Tasks 1-5, targeted tests và full test suite đều pass. | Passed |
+| CP3 - Golden Dataset, RAG & Benchmark | Dataset validate thành công, đã sinh 20 actual answers, Exercise 3.2/3.3 đã hoàn thành. | Passed |
+| CP4 - Failure Analysis & Reflection | `reflection.md` có 5 Whys, failure clustering, improvement log và regression strategy. | Passed |
+| Final Check | Bốn deliverables bắt buộc đã hoàn thiện: `solution/solution.py`, `golden_dataset.json`, `exercises.md`, `reflection.md`. | Passed |
 
-Final verification:
+Kiểm tra cuối:
 
 ```text
 python validate_golden_dataset.py
@@ -41,7 +41,7 @@ pytest tests/ -v
 42 passed, 1 warning
 ```
 
-The warning is a local `.pytest_cache` permission warning and does not indicate a failed test.
+Warning này chỉ liên quan quyền ghi `.pytest_cache` ở local, không phải test fail.
 
 ---
 
@@ -49,13 +49,13 @@ The warning is a local `.pytest_cache` permission warning and does not indicate 
 
 ### Exercise 1.1 - RAGAS Metric Thresholds
 
-| Metric | When a low score may be acceptable | When a low score is critical | Action |
+| Metric | Khi score thấp vẫn có thể chấp nhận | Khi score thấp là critical | Action |
 |---|---|---|---|
-| Faithfulness | Low-risk draft answers that will be reviewed by a human. | Customer support policy answers with unsupported claims about refunds, warranty, privacy, security, or safety. | Add grounding checks, require citations/evidence, block unsupported claims. |
-| Answer Relevance | Broad exploratory questions where the answer still gives nearby useful context. | The assistant does not answer the user's intent or sends the customer to the wrong support process. | Improve intent recognition, prompt clarity, and add a relevance gate. |
-| Context Recall | Very simple lookup questions where one chunk is enough. | Multi-condition questions where retriever misses dates, fees, exceptions, eligibility, or policy version evidence. | Improve query rewriting, top-k, chunking, hybrid retrieval, or routing. |
-| Context Precision | Relevant evidence is present but mixed with a small amount of harmless context. | Relevant chunks are ranked below noisy chunks, causing the generator to apply the wrong policy. | Add reranking and reduce noise in top retrieved chunks. |
-| Completeness | Intentionally concise answer that only omits non-essential background. | Missing dates, fees, conditions, exceptions, escalation steps, or safety/privacy requirements. | Add completeness rubric, few-shot examples, and hard-policy answer templates. |
+| Faithfulness | Câu trả lời nháp, rủi ro thấp, luôn có người kiểm tra lại. | Câu trả lời policy có claim không được context hỗ trợ, đặc biệt về refund, warranty, privacy, security hoặc safety. | Thêm grounding check, yêu cầu citation/evidence, chặn unsupported claims. |
+| Answer Relevance | Câu hỏi khám phá rộng, answer vẫn cung cấp thông tin gần đúng chủ đề. | Assistant không trả lời đúng intent hoặc hướng khách hàng sang sai quy trình hỗ trợ. | Cải thiện intent recognition, prompt clarity và thêm relevance gate. |
+| Context Recall | Câu hỏi lookup rất đơn giản, chỉ cần một chunk là đủ. | Câu hỏi nhiều điều kiện nhưng retriever miss dates, fees, exceptions, eligibility hoặc policy version evidence. | Cải thiện query rewriting, top-k, chunking, hybrid retrieval hoặc routing. |
+| Context Precision | Evidence cần thiết có trong top-k nhưng lẫn một ít context phụ không nguy hiểm. | Relevant chunks bị xếp sau noisy chunks, khiến generator áp dụng sai policy. | Thêm reranking và giảm noise trong top retrieved chunks. |
+| Completeness | Answer cố ý ngắn và chỉ bỏ qua background không quan trọng. | Thiếu dates, fees, conditions, exceptions, escalation steps hoặc safety/privacy requirements. | Thêm completeness rubric, few-shot examples và hard-policy answer templates. |
 
 **Metric interpretation required by CP1**
 
@@ -69,15 +69,15 @@ Ngược lại, nếu retrieval tốt nhưng Faithfulness thấp, lỗi thườn
 
 **1. Experiment to detect position bias**
 
-Prepare two answers A and B for the same OrbitTech question. In condition 1, show A before B. In condition 2, show B before A while keeping content identical. If the judge repeatedly gives a higher score to the first answer regardless of true quality, that indicates position bias.
+Chuẩn bị hai câu trả lời A và B cho cùng một câu hỏi OrbitTech. Condition 1 đặt A trước B; condition 2 đảo thứ tự B trước A nhưng giữ nguyên nội dung. Nếu judge thường xuyên chấm answer đứng trước cao hơn bất kể chất lượng thật, đó là dấu hiệu position bias.
 
 **2. Reducing verbosity bias with rubric design**
 
-The rubric should reward correctness, completeness, evidence, and safety instead of length. It should explicitly state that a short answer can receive maximum score if it contains all required facts, while a long answer should be penalized if it adds unsupported claims.
+Rubric cần thưởng cho correctness, completeness, evidence và safety thay vì độ dài. Rubric nên ghi rõ answer ngắn vẫn được điểm tối đa nếu đủ required facts, còn answer dài phải bị trừ điểm nếu thêm unsupported claims.
 
 **3. Why calibrate LLM judge with human labels?**
 
-Human labels provide an independent reference to check whether the judge is too lenient, too strict, biased toward verbose answers, or missing privacy/safety failures. In customer support, calibration helps ensure quality gates reflect real user risk.
+Human labels là mốc tham chiếu độc lập để kiểm tra judge có quá dễ, quá nghiêm, thiên vị answer dài hoặc bỏ sót privacy/safety failures hay không. Trong customer support, calibration giúp quality gate phản ánh đúng rủi ro thực tế.
 
 ---
 
@@ -87,21 +87,21 @@ Human labels provide an independent reference to check whether the judge is too 
 
 | Metric | Threshold | Reason |
 |---|---:|---|
-| Faithfulness | 0.75 | Policy answers must be grounded to avoid incorrect refund, warranty, privacy, or safety claims. |
-| Answer Relevance | 0.65 | The assistant must answer the user's actual issue before deployment. |
-| Completeness | 0.70 | Missing dates, fees, eligibility, exceptions, or escalation steps can mislead customers. |
+| Faithfulness | 0.75 | Policy answers phải grounded để tránh claim sai về refund, warranty, privacy hoặc safety. |
+| Answer Relevance | 0.65 | Assistant phải trả lời đúng vấn đề thật của user trước khi deploy. |
+| Completeness | 0.70 | Thiếu dates, fees, eligibility, exceptions hoặc escalation steps có thể làm khách hàng hiểu sai. |
 
 **When to use offline, online, and human evaluation**
 
-Offline evaluation should run before each release, prompt change, retriever/chunking change, or model switch. Online evaluation should monitor real traffic, drift, latency, cost, and user feedback. Human review should be used for high-risk cases such as refunds, warranty disputes, account compromise, privacy, and safety.
+Offline evaluation nên chạy trước mỗi release, prompt change, retriever/chunking change hoặc model switch. Online evaluation dùng để theo dõi real traffic, drift, latency, cost và user feedback. Human review dùng cho high-risk cases như refunds, warranty disputes, account compromise, privacy và safety.
 
 ---
 
 ## Part 2 - Core Coding
 
-Implemented in `template.py` and copied to `solution/solution.py`.
+Đã implement trong `template.py` và copy sang `solution/solution.py`.
 
-Completed tasks:
+Các phần đã hoàn thành:
 
 - `QAPair`, `EvalResult`, and `overall_score()`.
 - Answer-side metrics: Faithfulness, Relevance, Completeness.
@@ -123,7 +123,7 @@ Completed tasks:
 | Task 5 - FailureAnalyzer | `pytest tests/test_solution.py::TestFailureAnalyzer tests/test_solution.py::TestGenerateImprovementLog -v` | 9 passed |
 | Full suite | `pytest tests/ -v` | 42 passed |
 
-The Task 2 targeted result is `15 passed` because the bonus reranking test is implemented and therefore no longer skipped.
+Task 2 targeted result là `15 passed` vì bonus reranking đã được implement nên test bonus không còn bị skip.
 
 ---
 
@@ -131,7 +131,7 @@ The Task 2 targeted result is `15 passed` because the bonus reranking test is im
 
 ### Exercise 3.1 - Build the Golden Dataset
 
-20 QA records were completed in `golden_dataset.json`.
+Đã hoàn thành 20 QA records trong `golden_dataset.json`.
 
 | Category | Result |
 |---|---|
@@ -145,21 +145,21 @@ The Task 2 targeted result is `15 passed` because the bonus reranking test is im
 
 Representative design choices:
 
-| ID | Difficulty | Source document(s) | Why this case fits |
+| ID | Difficulty | Source document(s) | Vì sao case phù hợp |
 |---|---|---|---|
-| E02 | Easy | `02_orders_and_payments.md` | Direct factual lookup: when OrbitTech captures payment. One evidence paragraph is enough. |
-| H02 | Hard | `09_escalation_and_policy_updates.md`, `03_promotions_and_membership.md` | Requires policy version, order date, OrbitPlus status, and the 45-day exception. |
-| A02 | Adversarial | `00_system_scope.md` | Tests prompt injection: assistant must ignore override requests and not reveal hidden prompts, credentials, or private data. |
+| E02 | Easy | `02_orders_and_payments.md` | Factual lookup trực tiếp: khi nào OrbitTech capture payment. Một evidence paragraph là đủ. |
+| H02 | Hard | `09_escalation_and_policy_updates.md`, `03_promotions_and_membership.md` | Cần xử lý policy version, order date, OrbitPlus status và 45-day exception. |
+| A02 | Adversarial | `00_system_scope.md` | Kiểm tra prompt injection: assistant phải ignore override requests và không reveal hidden prompts, credentials hoặc private data. |
 
-Hardest dataset-design point:
+Điểm khó nhất khi thiết kế dataset:
 
-> The hardest part was keeping expected answers short while still including all dates, fees, conditions, and exceptions. Hard cases require combining multiple documents, especially policy-version logic from `09_escalation_and_policy_updates.md`.
+> Khó nhất là giữ expected answers đủ ngắn nhưng vẫn có đủ dates, fees, conditions và exceptions. Các hard cases cần kết hợp nhiều tài liệu, đặc biệt là policy-version logic trong `09_escalation_and_policy_updates.md`.
 
 Checks:
 
-- [x] Every expected-answer claim is supported by evidence.
+- [x] Mọi claim trong expected answer đều có evidence hỗ trợ.
 - [x] No duplicate questions.
-- [x] No outside-corpus knowledge is used.
+- [x] Không dùng kiến thức ngoài corpus.
 - [x] `python validate_golden_dataset.py` reports `PASS`.
 
 ---
@@ -171,6 +171,26 @@ Commands run:
 ```bash
 python domain_assistant.py
 python evaluate_answers.py
+```
+
+**Deterministic RAGAS-inspired evaluator trong lab**
+
+Phần bắt buộc của lab không phụ thuộc real RAGAS framework. Tôi đã chạy deterministic evaluator trong `template.py` thông qua `evaluate_answers.py`. Evaluator này mô phỏng các RAGAS-style metrics bằng word-overlap heuristic để kết quả có thể chạy nhanh, lặp lại được và không tốn thêm LLM judge calls.
+
+Các metric deterministic đã chạy:
+
+| Metric | Cách tính trong lab | Vai trò |
+|---|---|---|
+| Faithfulness | `|answer_tokens ∩ context_tokens| / |answer_tokens|` | Đo answer có grounded trong context không. |
+| Relevance | `|answer_tokens ∩ question_tokens| / |question_tokens|` | Đo answer có bám vào question không. |
+| Completeness | `|answer_tokens ∩ expected_tokens| / |expected_tokens|` | Đo answer có đủ ý so với expected answer không. |
+| Context Recall | `|expected_tokens ∩ union_tokens| / |expected_tokens|` | Đo retriever có lấy đủ evidence không. |
+| Context Precision | rank-aware Average Precision@K | Đo chunk relevant có đứng sớm trong ranking không. |
+
+Kết quả deterministic RAGAS-inspired run chính là bảng benchmark bên dưới và được lưu trong:
+
+```text
+artifacts/benchmark_results.json
 ```
 
 Actual-answer artifact:
@@ -221,15 +241,19 @@ Aggregate report:
 - Avg Completeness: 0.697
 - Failure type distribution: `{'off_topic': 7, 'hallucination': 1}`
 
+Diễn giải kết quả deterministic:
+
+> Context Recall `0.879` và Context Precision `0.962` cho thấy retriever lấy evidence khá tốt. Faithfulness `0.748`, Relevance `0.648`, Completeness `0.697` thấp hơn vì answer-side metrics bị ảnh hưởng bởi wording, câu trả lời quá ngắn hoặc thiếu một phần policy detail. Đây là kết quả RAGAS-style chính thức của lab, còn DeepEval ở Exercise 3.4 chỉ là bonus framework comparison.
+
 Three lowest overall cases:
 
 1. A01 | Score: 0.121 | Failure type: hallucination
 2. E03 | Score: 0.533 | Failure type: off_topic
 3. H03 | Score: 0.548 | Failure type: off_topic
 
-Short interpretation:
+Nhận xét ngắn:
 
-> Retrieval is generally strong: Avg Context Recall is `0.879` and Avg Context Precision is `0.962`. The weaker area is answer-side evaluation: Faithfulness `0.748`, Relevance `0.648`, Completeness `0.697`. Some Groq answers are semantically correct but receive low lexical-overlap scores because the wording differs from expected answers.
+> Retrieval nhìn chung tốt: Avg Context Recall là `0.879` và Avg Context Precision là `0.962`. Phần yếu hơn nằm ở answer-side evaluation: Faithfulness `0.748`, Relevance `0.648`, Completeness `0.697`. Một số answer của Groq đúng về semantic nhưng bị lexical-overlap score thấp vì wording khác expected answers.
 
 ---
 
@@ -245,29 +269,29 @@ Selected dimensions:
 
 | Score | Domain-specific criteria | Example response |
 |---:|---|---|
-| 5 | Correct, complete, directly answers the question, includes required dates, fees, conditions, exceptions, and safety/privacy handling; no unsupported claims. | "No. Orders placed before September 1, 2026 keep the 21-day version 1.0 unopened-device window regardless of membership." |
-| 4 | Mostly correct and grounded, missing only a minor detail that does not change customer action. | Correct return window but missing minor refund timing detail. |
-| 3 | Partially correct but missing an important condition, date, fee, exception, or action step. | Says opened devices have 14 days but omits 10% restocking fee. |
-| 2 | Major omission or mixed policy that could mislead the customer. | Applies the OrbitPlus 45-day benefit without checking order date. |
-| 1 | Wrong, irrelevant, unsafe, privacy-violating, or follows prompt injection / false premise. | Reveals another customer's data or asks for password/OTP. |
+| 5 | Đúng, đủ, trả lời trực tiếp question, có required dates, fees, conditions, exceptions và safety/privacy handling; không có unsupported claims. | "No. Orders placed before September 1, 2026 keep the 21-day version 1.0 unopened-device window regardless of membership." |
+| 4 | Gần như đúng và grounded, chỉ thiếu minor detail không làm thay đổi customer action. | Nêu đúng return window nhưng thiếu minor refund timing detail. |
+| 3 | Đúng một phần nhưng thiếu important condition, date, fee, exception hoặc action step. | Nói opened devices có 14 days nhưng bỏ qua 10% restocking fee. |
+| 2 | Thiếu sót lớn hoặc trộn policy khiến customer có thể hiểu sai. | Áp dụng OrbitPlus 45-day benefit mà không kiểm tra order date. |
+| 1 | Sai, irrelevant, unsafe, vi phạm privacy hoặc làm theo prompt injection / false premise. | Reveal dữ liệu khách hàng khác hoặc hỏi password/OTP. |
 
 Edge cases:
 
-| Edge Case | Why difficult? | Rubric handling |
+| Edge Case | Vì sao khó? | Rubric handling |
 |---|---|---|
-| Short answer is semantically correct but wording differs | Word-overlap may score it low. | Judge semantic meaning and actionability, not just token overlap. |
-| Policy depends on effective date | Current policy may be wrong for older orders. | Score 5 requires identifying triggering date and applicable version. |
-| Privacy/security false premise | Helpful-sounding answer can be unsafe. | Any request for password, OTP, full card number, or private data caps at score 1. |
+| Short answer semantically correct nhưng wording khác | Word-overlap có thể chấm thấp. | Judge theo semantic meaning và actionability, không chỉ token overlap. |
+| Policy phụ thuộc effective date | Current policy có thể sai với older orders. | Score 5 yêu cầu xác định triggering date và applicable version. |
+| Privacy/security false premise | Answer nghe helpful nhưng có thể unsafe. | Mọi request password, OTP, full card number hoặc private data bị cap ở score 1. |
 
 Bias controls:
 
-> Reduce position bias by randomizing answer order in pairwise evaluation. Reduce verbosity bias by rewarding required facts and penalizing unsupported extra claims. Reduce self-preference bias through human calibration and multiple judges when needed.
+> Giảm position bias bằng cách randomize answer order trong pairwise evaluation. Giảm verbosity bias bằng cách thưởng required facts và phạt unsupported extra claims. Giảm self-preference bias bằng human calibration và dùng multiple judges khi cần.
 
 ---
 
 ## Exercise 3.4 (+10) - Evaluation Framework Comparison
 
-The required lab evaluator remains the RAGAS-inspired deterministic evaluator implemented in `template.py`. A real RAGAS framework run was unstable in this local setup, so I added a DeepEval experiment as the second framework-style comparison while keeping the required lab metrics unchanged.
+Required lab evaluator vẫn là RAGAS-inspired deterministic evaluator được implement trong `template.py`. Phần chạy real RAGAS framework không ổn định trong môi trường local, nên tôi bổ sung DeepEval experiment như framework comparison thứ hai, đồng thời giữ nguyên required lab metrics.
 
 Files:
 
@@ -282,9 +306,9 @@ Provider/model: Groq - llama-3.3-70b-versatile
 Completed: 19 / 20
 ```
 
-A02 hit Groq `429` rate limits on several metric calls, so the DeepEval artifact is documented as a partial run instead of being hidden.
+A02 gặp Groq `429` rate limits ở một số metric calls, nên DeepEval artifact được ghi nhận là partial run thay vì che giấu lỗi.
 
-DeepEval summary on completed scores:
+DeepEval summary trên các scores đã hoàn thành:
 
 | Metric | Average |
 |---|---:|
@@ -297,24 +321,24 @@ Framework comparison:
 
 | Criterion | RAGAS / RAGAS-inspired evaluator | DeepEval |
 |---|---|---|
-| Setup complexity | Medium to high for real RAGAS; deterministic lab version is easy to run and repeat. | Medium; integrates well with test-style evaluation but requires an LLM judge. |
-| Metrics | Strong for RAG diagnosis: Faithfulness, Relevance, Completeness, Context Recall, Context Precision. | Strong for semantic answer quality: Answer Relevancy, Faithfulness, Contextual Recall, Contextual Precision, GEval-style rubric. |
-| CI/CD fit | Deterministic lab metrics are stable and cheap for regression gates. | Useful for semantic checks but affected by LLM cost, rate limits, and judge bias. |
-| Result on this dataset | Flags retrieval as generally strong but answer-side metrics as weaker. | Gives higher semantic answer scores, supporting the idea that some `off_topic` labels are lexical false negatives. |
+| Setup complexity | Medium đến high với real RAGAS; deterministic lab version dễ chạy và dễ lặp lại. | Medium; tích hợp tốt với test-style evaluation nhưng cần LLM judge. |
+| Metrics | Mạnh cho RAG diagnosis: Faithfulness, Relevance, Completeness, Context Recall, Context Precision. | Mạnh cho semantic answer quality: Answer Relevancy, Faithfulness, Contextual Recall, Contextual Precision, GEval-style rubric. |
+| CI/CD fit | Deterministic lab metrics ổn định và rẻ cho regression gates. | Hữu ích cho semantic checks nhưng bị ảnh hưởng bởi LLM cost, rate limits và judge bias. |
+| Result on this dataset | Cho thấy retrieval nhìn chung mạnh nhưng answer-side metrics yếu hơn. | Chấm semantic answer score cao hơn, củng cố nhận định một số `off_topic` là lexical false negatives. |
 
-Conclusion:
+Kết luận:
 
-> I would use deterministic RAGAS-inspired metrics for repeatable offline regression, and DeepEval/LLM-as-a-Judge for semantic review of borderline cases such as E03, H03, H05, and A03.
+> Tôi sẽ dùng deterministic RAGAS-inspired metrics cho offline regression có thể lặp lại, và dùng DeepEval/LLM-as-a-Judge để review semantic cho các borderline cases như E03, H03, H05 và A03.
 
 ---
 
 ## Exercise 3.5 (+5) - Retrieval Reranking
 
-Implemented `rerank_by_overlap()` in `template.py`.
+Đã implement `rerank_by_overlap()` trong `template.py`.
 
 Goal:
 
-> Test whether changing chunk order can improve Context Precision without changing Context Recall.
+> Kiểm tra việc đổi thứ tự chunks có cải thiện Context Precision mà không làm đổi Context Recall hay không.
 
 Mechanism:
 
@@ -324,7 +348,7 @@ same retrieved chunks
 -> do not add or remove chunks
 ```
 
-Because the retrieved set is unchanged, union coverage is unchanged; therefore Context Recall should stay the same. Context Precision can improve because relevant chunks move earlier.
+Vì retrieved set không đổi nên union coverage không đổi; do đó Context Recall giữ nguyên. Context Precision có thể tăng vì relevant chunks được đưa lên trước.
 
 | ID | Recall before | Recall after | Precision before | Precision after | Delta Precision |
 |---|---:|---:|---:|---:|---:|
@@ -337,19 +361,19 @@ Because the retrieved set is unchanged, union coverage is unchanged; therefore C
 | M03 | 1.000 | 1.000 | 0.917 | 1.000 | +0.083 |
 | **Avg** | **0.801** | **0.801** | **0.898** | **1.000** | **+0.102** |
 
-Conclusion:
+Kết luận:
 
-> Reranking improves ranking quality when evidence already exists in the retrieved set. It does not fix missing-evidence cases like A01, where recall remains `0.200`.
+> Reranking cải thiện ranking quality khi evidence đã có trong retrieved set. Nó không sửa được missing-evidence cases như A01, nơi recall vẫn là `0.200`.
 
 ---
 
 ## Part 4 - Reflection
 
-Completed in `reflection.md`.
+Đã hoàn thành trong `reflection.md`.
 
-It includes:
+Nội dung bao gồm:
 
-- Benchmark summary and metric interpretation.
+- Benchmark summary và metric interpretation.
 - Pass/fail rules and why most failures are `off_topic`.
 - Top 3 worst failures with 5 Whys.
 - Analysis of all failed cases.
@@ -357,19 +381,19 @@ It includes:
 - Improvement log.
 - Regression strategy.
 - Continuous improvement loop.
-- Bonus reranking and DeepEval comparison update.
+- Bonus reranking và DeepEval comparison update.
 
 ---
 
 ## Completion Checklist
 
-- [x] Student name and ID included.
-- [x] All required tests pass on `solution/solution.py`.
-- [x] Targeted tests for each core task were run and documented.
-- [x] `golden_dataset.json` validates successfully.
-- [x] `artifacts/actual_answers.json` has 20 answers and 0 errors.
-- [x] Exercise 3.2 includes all five metrics, aggregate report, and three lowest cases.
-- [x] Exercise 3.3 includes rubric 1-5, edge cases, and bias controls.
-- [x] `reflection.md` includes 5 Whys, improvement log, and regression strategy.
-- [x] Bonus framework comparison is documented.
-- [x] Bonus reranking is implemented and analyzed.
+- [x] Đã điền student name và student ID.
+- [x] Toàn bộ required tests pass trên `solution/solution.py`.
+- [x] Targeted tests cho từng core task đã chạy và được ghi lại.
+- [x] `golden_dataset.json` validate thành công.
+- [x] `artifacts/actual_answers.json` có 20 answers và 0 errors.
+- [x] Exercise 3.2 có đủ 5 metrics, aggregate report và 3 lowest cases.
+- [x] Exercise 3.3 có rubric 1-5, edge cases và bias controls.
+- [x] `reflection.md` có 5 Whys, improvement log và regression strategy.
+- [x] Bonus framework comparison đã được document.
+- [x] Bonus reranking đã được implement và phân tích.
