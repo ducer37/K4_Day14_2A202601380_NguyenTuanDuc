@@ -242,28 +242,80 @@ class TextGenerator(Protocol):
     def generate(self, prompt: str) -> str: ...
 
 
+def _split_env_list(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _load_provider_api_keys(provider: str) -> list[str]:
+    if provider == "groq":
+        keys = _split_env_list(os.getenv("GROQ_API_KEYS", ""))
+        keys.extend(
+            os.getenv(f"GROQ_API_KEY_{index}", "").strip()
+            for index in range(1, 5)
+        )
+        return [key for key in keys if key and not key.startswith("gsk_your_")]
+
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    return [api_key] if api_key and not api_key.startswith("your_") else []
+
+
 class OpenAIGenerator:
     def __init__(self, max_output_tokens: int = 300) -> None:
-        api_key = os.getenv("OPENAI_API_KEY", "").strip()
-        self.model = os.getenv("OPENAI_MODEL", "").strip()
-        if not api_key:
-            raise RuntimeError("OPENAI_API_KEY is missing from .env")
+        self.provider = os.getenv("LLM_PROVIDER", "groq").strip().lower()
+        if self.provider not in {"groq", "openai"}:
+            raise RuntimeError("LLM_PROVIDER must be either 'groq' or 'openai'")
+
+        default_model = (
+            "llama-3.3-70b-versatile"
+            if self.provider == "groq"
+            else "gpt-4o-mini"
+        )
+        model_env = "GROQ_MODEL" if self.provider == "groq" else "OPENAI_MODEL"
+        self.model = os.getenv(model_env, default_model).strip()
+        api_keys = _load_provider_api_keys(self.provider)
+        if not api_keys:
+            key_name = "GROQ_API_KEY_1..4" if self.provider == "groq" else "OPENAI_API_KEY"
+            raise RuntimeError(f"{key_name} is missing from .env")
         if not self.model:
-            raise RuntimeError("OPENAI_MODEL is missing from .env")
-        self.client = OpenAI(api_key=api_key)
+            raise RuntimeError(f"{model_env} is missing from .env")
+        base_url = (
+            "https://api.groq.com/openai/v1"
+            if self.provider == "groq"
+            else None
+        )
+        self.clients = [
+            OpenAI(api_key=api_key, base_url=base_url)
+            if base_url
+            else OpenAI(api_key=api_key)
+            for api_key in api_keys
+        ]
+        self.next_client_index = 0
         self.max_output_tokens = max_output_tokens
 
     def generate(self, prompt: str) -> str:
-        response = self.client.responses.create(
-            model=self.model,
-            input=prompt,
-            temperature=0,
-            max_output_tokens=self.max_output_tokens,
+        errors: list[str] = []
+        for attempt in range(len(self.clients)):
+            index = (self.next_client_index + attempt) % len(self.clients)
+            client = self.clients[index]
+            try:
+                response = client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0,
+                    max_tokens=self.max_output_tokens,
+                )
+                self.next_client_index = (index + 1) % len(self.clients)
+                answer = (response.choices[0].message.content or "").strip()
+                if not answer:
+                    raise RuntimeError(f"{self.provider} returned an empty answer")
+                return answer
+            except (OpenAIError, RuntimeError) as exc:
+                errors.append(f"key #{index + 1}: {exc}")
+                continue
+        raise RuntimeError(
+            f"All {self.provider} API keys failed or were rate limited: "
+            + " | ".join(errors)
         )
-        answer = response.output_text.strip()
-        if not answer:
-            raise RuntimeError("OpenAI returned an empty answer")
-        return answer
 
 
 @dataclass(frozen=True)
